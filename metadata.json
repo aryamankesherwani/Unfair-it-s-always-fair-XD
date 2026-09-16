@@ -1,0 +1,6 @@
+{
+  "name": "Unfair Platformer",
+  "description": "A 2D troll platformer where the game predicts and subverts expectations with traps, fake jumps, and sudden surprises.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
