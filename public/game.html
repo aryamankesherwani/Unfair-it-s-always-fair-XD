@@ -1697,176 +1697,54 @@
         }
 
         // -------------------------------------------------------------
-        // LEVEL 9: The Screen Wrap Troll (3 Bait Platforms + Secret Screen Wrap)
+        // LEVEL 9: The Fading Slow Goal
         // -------------------------------------------------------------
         else if (curLevel === 9) {
-          // Starting Ledge on left (extends off-screen to x: -60 so player can walk backwards safely)
-          solids.push({ x: -60, y: 370, w: 210, h: 80 });
+          solids.push({ x: 0, y: 370, w: 150, h: 80 }); // Start ledge
+          solids.push({ x: 690, y: 370, w: 200, h: 80 }); // Goal ledge
+          killers.push({ x: 150, y: 418, w: 540, h: 32 }); // Spike pit
 
-          // Goal Ledge on far right
-          solids.push({ x: 690, y: 370, w: 170, h: 80 });
-
-          // Massive un-jumpable pit of red spikes between starting ledge and goal ledge
-          killers.push({ x: 150, y: 418, w: 540, h: 32 });
+          // Safe platforms to jump across
+          solids.push({ x: 230, y: 310, w: 70, h: 18 });
+          solids.push({ x: 380, y: 270, w: 70, h: 18 });
+          solids.push({ x: 530, y: 310, w: 70, h: 18 });
 
           // Hidden ceiling & spikes above Platform 2
           solids.push({ x: 330, y: 48, w: 170, h: 16 });
           killers.push({ x: 340, y: 64, w: 150, h: 26, dir: 'down' });
 
-          // --- BAIT PLATFORM 1: Shrinks to nothing upon landing ---
-          if (!lvlState.lvl9Plat1Shrunk) {
-            const plat1 = { x: 230, y: 310, w: lvlState.lvl9Plat1W, h: 18 };
-            solids.push(plat1);
-
-            if (
-              player.x + player.w > plat1.x &&
-              player.x < plat1.x + plat1.w &&
-              player.y + player.h >= plat1.y &&
-              player.y + player.h <= plat1.y + 14
-            ) {
-              lvlState.lvl9Plat1Shrunk = true;
+          // Start the timer when the player moves right
+          if (player.x > 80 && !lvlState.lvl9GoalRunning) {
+              lvlState.lvl9GoalRunning = true; // reusing state variable name but for the fade trigger
+              lvlState.lvl9GoalAlpha = 1.0;
               playSfx('trap');
-              speakAnnoyingKid("Poof! Where did the platform go?");
               popupTexts.push({
-                text: "SHRUNK TO NOTHING!",
-                x: 180,
-                y: 260,
-                color: '#f87171',
+                text: "HURRY! THE GOAL IS FADING!",
+                x: 400,
+                y: 150,
+                color: '#facc15',
                 alpha: 1,
                 vy: -0.8
               });
-              for (let i = 0; i < 20; i++) {
-                particles.push({
-                  x: 265,
-                  y: 319,
-                  vx: (Math.random() - 0.5) * 6,
-                  vy: (Math.random() - 0.5) * 6,
-                  size: 3 + Math.random() * 3,
-                  color: '#fde047',
-                  alpha: 1,
-                  life: 20
-                });
+          }
+
+          if (lvlState.lvl9GoalRunning) {
+              if (lvlState.lvl9GoalAlpha === undefined) lvlState.lvl9GoalAlpha = 1.0;
+              lvlState.lvl9GoalX += 0.35; // moves very slowly
+              lvlState.lvl9GoalAlpha -= 0.0038; // slowly fades
+
+              if (lvlState.lvl9GoalAlpha < 0) {
+                  lvlState.lvl9GoalAlpha = 0;
               }
-            }
-          } else {
-            if (lvlState.lvl9Plat1W > 0) {
-              lvlState.lvl9Plat1W = Math.max(0, lvlState.lvl9Plat1W - 7);
-            }
           }
 
-          // --- BAIT PLATFORM 2: Rockets straight up into hidden ceiling spikes ---
-          const plat2 = { x: 380, y: lvlState.lvl9Plat2Y, w: 70, h: 18 };
-          solids.push(plat2);
-
-          if (!lvlState.lvl9Plat2Rocketing) {
-            if (
-              player.x + player.w > plat2.x &&
-              player.x < plat2.x + plat2.w &&
-              player.y + player.h >= plat2.y &&
-              player.y + player.h <= plat2.y + 14
-            ) {
-              lvlState.lvl9Plat2Rocketing = true;
-              playSfx('trap');
-              speakAnnoyingKid("Blast off into the ceiling!");
-              popupTexts.push({
-                text: "ROCKET TO CEILING SPIKES!",
-                x: 310,
-                y: 220,
-                color: '#f87171',
-                alpha: 1,
-                vy: -0.8
-              });
-            }
-          } else {
-            // Rocket upwards rapidly
-            lvlState.lvl9Plat2Y -= 15;
-            if (
-              player.x + player.w > plat2.x - 12 &&
-              player.x < plat2.x + plat2.w + 12 &&
-              player.y + player.h <= plat2.y + 24
-            ) {
-              player.y = plat2.y - player.h;
-              player.vy = -15;
-            }
+          // Goal collision only counts if it hasn't faded away completely
+          if (lvlState.lvl9GoalAlpha === undefined || lvlState.lvl9GoalAlpha > 0) {
+              const goal = { x: lvlState.lvl9GoalX, y: lvlState.lvl9GoalY, w: 32, h: 32 };
+              if (checkCollision(player, goal)) {
+                  advanceLevel();
+              }
           }
-
-          // --- BAIT PLATFORM 3: Causes the green goal to sprout legs & run completely off screen ---
-          const plat3 = { x: 530, y: 280, w: 70, h: 18 };
-          solids.push(plat3);
-
-          if (!lvlState.lvl9GoalRunning) {
-            if (
-              player.x + player.w > plat3.x &&
-              player.x < plat3.x + plat3.w &&
-              player.y + player.h >= plat3.y &&
-              player.y + player.h <= plat3.y + 14
-            ) {
-              lvlState.lvl9GoalRunning = true;
-              playSfx('trap');
-              speakAnnoyingKid("Wait! You cannot catch the goal!");
-              popupTexts.push({
-                text: "THE GOAL SPROUTED LEGS AND RAN AWAY!",
-                x: 420,
-                y: 240,
-                color: '#f87171',
-                alpha: 1,
-                vy: -0.8
-              });
-            }
-          } else {
-            // Goal runs away fast to the right off-screen
-            lvlState.lvl9GoalX += 11;
-            lvlState.lvl9GoalLegAngle += 0.45;
-            if (lvlState.timer % 3 === 0 && lvlState.lvl9GoalX < 850) {
-              particles.push({
-                x: lvlState.lvl9GoalX + 16,
-                y: lvlState.lvl9GoalY + 30,
-                vx: -3 + (Math.random() - 0.5) * 2,
-                vy: -1 + (Math.random() - 0.5) * 2,
-                size: 3 + Math.random() * 3,
-                color: '#e2e8f0',
-                alpha: 0.8,
-                life: 16
-              });
-            }
-          }
-
-          // --- THE PASSABLE SOLUTION: Screen Wrap ---
-          // Walking backwards off the left edge (-10px) teleports player to top-right corner
-          if (player.x <= -10) {
-            player.x = 732;
-            player.y = 35;
-            player.vx = 0;
-            player.vy = 2;
-            player.grounded = false;
-            player.jumpsRemaining = 2;
-            lvlState.lvl9Wrapped = true;
-            playBoing(true);
-            popupTexts.push({
-              text: "🌀 SCREEN WRAP! DROPPING TO VICTORY! 🌀",
-              x: 440,
-              y: 80,
-              color: '#4ade80',
-              alpha: 1,
-              vy: -0.8
-            });
-            for (let i = 0; i < 24; i++) {
-              particles.push({
-                x: 746,
-                y: 50,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8,
-                size: 3 + Math.random() * 4,
-                color: '#38bdf8',
-                alpha: 1,
-                life: 25
-              });
-            }
-          }
-
-          // Green Target Goal
-          const goal = { x: lvlState.lvl9GoalX, y: lvlState.lvl9GoalY, w: 32, h: 32 };
-          if (checkCollision(player, goal)) advanceLevel();
         }
 
         // -------------------------------------------------------------
@@ -3644,7 +3522,7 @@
         drawGround(330, 250, 65, 18, true);
         drawGoal(730, 338, 32, 32, false);
       } else if (lvl === 9) {
-        // LEVEL 9: The Screen Wrap Troll (3 Bait Platforms + Secret Screen Wrap)
+        // LEVEL 9: The Fading Slow Goal
         // Starting ground
         drawGround(0, 370, 150, 80);
         // Goal ground on right
@@ -3656,84 +3534,29 @@
         drawGround(330, 48, 170, 16);
         drawSpikes(340, 64, 150, 26, 'down');
 
-        // Bait Platform 1 (Shrinking)
-        if (lvlState.lvl9Plat1W > 0) {
-          ctx.save();
-          const p1x = 230 + (70 - lvlState.lvl9Plat1W) / 2;
-          ctx.fillStyle = '#facc15';
-          ctx.fillRect(p1x, 310, lvlState.lvl9Plat1W, 18);
-          ctx.strokeStyle = '#eab308';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(p1x, 310, lvlState.lvl9Plat1W, 18);
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-          ctx.fillRect(p1x, 310, lvlState.lvl9Plat1W, 3);
-          ctx.restore();
-        }
-
-        // Bait Platform 2 (Rocket)
+        // Safe platforms
         ctx.save();
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(380, lvlState.lvl9Plat2Y, 70, 18);
-        ctx.strokeStyle = '#eab308';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(230, 310, 70, 18);
+        ctx.fillRect(380, 270, 70, 18);
+        ctx.fillRect(530, 310, 70, 18);
+        ctx.strokeStyle = '#cbd5e1';
         ctx.lineWidth = 2;
-        ctx.strokeRect(380, lvlState.lvl9Plat2Y, 70, 18);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.fillRect(380, lvlState.lvl9Plat2Y, 70, 3);
-        if (lvlState.lvl9Plat2Rocketing) {
-          ctx.fillStyle = '#f97316';
-          ctx.beginPath();
-          ctx.moveTo(390, lvlState.lvl9Plat2Y + 18);
-          ctx.lineTo(415, lvlState.lvl9Plat2Y + 36 + Math.random() * 8);
-          ctx.lineTo(440, lvlState.lvl9Plat2Y + 18);
-          ctx.fill();
-        }
+        ctx.strokeRect(230, 310, 70, 18);
+        ctx.strokeRect(380, 270, 70, 18);
+        ctx.strokeRect(530, 310, 70, 18);
         ctx.restore();
 
-        // Bait Platform 3 (Sprouts legs on goal)
-        ctx.save();
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(530, 280, 70, 18);
-        ctx.strokeStyle = '#eab308';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(530, 280, 70, 18);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.fillRect(530, 280, 70, 3);
-        ctx.restore();
-
-        // Green Goal (with running legs if activated)
-        if (lvlState.lvl9GoalRunning) {
-          ctx.save();
-          ctx.strokeStyle = '#0f172a';
-          ctx.lineWidth = 3.5;
-          ctx.lineCap = 'round';
-          const swing = Math.sin(lvlState.lvl9GoalLegAngle) * 10;
-          // Leg 1
-          ctx.beginPath();
-          ctx.moveTo(lvlState.lvl9GoalX + 8, lvlState.lvl9GoalY + 30);
-          ctx.lineTo(lvlState.lvl9GoalX + 8 + swing, lvlState.lvl9GoalY + 42);
-          ctx.stroke();
-          // Leg 2
-          ctx.beginPath();
-          ctx.moveTo(lvlState.lvl9GoalX + 24, lvlState.lvl9GoalY + 30);
-          ctx.lineTo(lvlState.lvl9GoalX + 24 - swing, lvlState.lvl9GoalY + 42);
-          ctx.stroke();
-          ctx.restore();
+        // Fading Goal
+        let currentAlpha = lvlState.lvl9GoalAlpha;
+        if (currentAlpha === undefined) currentAlpha = 1.0;
+        
+        if (currentAlpha > 0) {
+            ctx.save();
+            ctx.globalAlpha = currentAlpha;
+            drawGoal(lvlState.lvl9GoalX, lvlState.lvl9GoalY, 32, 32, false);
+            ctx.restore();
         }
-
-        // Draw Goal
-        if (lvlState.lvl9GoalX < 850) {
-          drawGoal(lvlState.lvl9GoalX, lvlState.lvl9GoalY, 32, 32, false);
-        }
-
-        // Screen Wrap Portal subtle glow on far left edge
-        ctx.save();
-        ctx.strokeStyle = 'rgba(56, 189, 248, ' + (0.35 + Math.sin(lvlState.timer * 0.08) * 0.2) + ')';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(2, 300);
-        ctx.lineTo(2, 370);
-        ctx.stroke();
-        ctx.restore();
       } else if (lvl === 10) {
         // LEVEL 10: The Hologram Pit (Fake Spikes & Hidden Lower Tunnel)
         // High starting ground
